@@ -78,6 +78,7 @@ pub struct Splits {}
 pub struct Dividends {}
 pub struct Delistings {}
 pub struct SymbolChangedEvents {}
+pub struct Security {}
 
 /// Asset class
 pub enum SecurityType {

@@ -2,15 +2,20 @@ use std::collections::HashMap;
 use crate::data::{BaseData, SecurityPrice, Slice, SubscriptionDataConfig};
 use crate::data::base_data_collection::BaseDataCollection;
 use crate::data::universe::{SecurityChanges, Universe};
+use crate::engine::Algorithm;
 
 pub(crate) mod local;
 pub(crate) mod subscriptions;
 pub(crate) mod synchronizer;
 
-pub(crate) trait Synchronizer {
-    fn stream_data<'a, T>(&mut self) -> dyn Iterator<Item = TimeSlice<'a, T>>
-    where
-        T: BaseData;
+pub(crate) trait Synchronizer<'a, B>
+where
+    B: BaseData
+{
+    type SynchronizeIterator;
+
+    fn new(algorithm: impl Algorithm);
+    fn stream_data(&mut self) -> Self::SynchronizeIterator;
 }
 
 pub(crate) trait TimeProvider {
@@ -52,10 +57,23 @@ where
     data: Vec<&'a T>
 }
 
-pub(crate) struct CancelationToken {
+pub(crate) struct TimeSliceFactory {
 
 }
 
-pub(crate) struct TimeSliceFactory {
+pub(crate) struct SubscriptionFrontierTimeProvider<'a, T>
+where
+    T: Subscriptions
+{
+    utc_now: u128,
+    subscription_manager: Vec<&'a T>,
+}
 
+impl<'a, T> SubscriptionFrontierTimeProvider<'a, T> {
+    fn new(utc_now: u128, subscriptions: Vec<&'a Subscription>) -> Self {
+        Self {
+            utc_now,
+            subscription_manager: subscriptions 
+        }
+    }
 }

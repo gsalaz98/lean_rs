@@ -1,12 +1,25 @@
+use std::vec::IntoIter;
+use crate::data::BaseData;
+use crate::data::universe::SubscriptionRequest;
+
 pub(crate) mod subscription_reader;
 
-pub trait DataFeedSubscriptionManager {
-    fn on_subscription_added(subscription: Subscription);
-    fn on_subscription_removed(subscription: Subscription);
+pub trait Subscriptions: Iterator {
+    
 }
 
-pub struct Subscription {
+pub struct Subscription<'a, T> {
+    removed_from_universe: bool,
+    data: IntoIter<SubscriptionData<'a, T>>,
+    requests: Vec<SubscriptionRequest<'a>>,
+}
 
+pub struct SubscriptionData<'a, T> 
+where
+    T: BaseData
+{
+    data: &'a T,
+    emit_time_utc: u128,
 }
 
 pub struct SubscriptionDataSource {
