@@ -1,35 +1,24 @@
 use std::collections::HashMap;
 use crate::data::{BaseData, SecurityPrice, Slice, SubscriptionDataConfig};
-use crate::data::base_data_collection::BaseDataCollection;
+use crate::data::collections::BaseDataCollection;
 use crate::data::universe::{SecurityChanges, Universe};
-use crate::engine::Algorithm;
-use crate::engine::data_feeds::subscriptions::Subscriptions;
+use crate::engine::data_feeds::subscriptions::{Subscriptions, SubscriptionData};
 
 pub(crate) mod local;
 pub(crate) mod subscriptions;
 pub(crate) mod synchronizer;
 
-pub(crate) trait Synchronizer<'a, 'b, B, T>
-where
-    B: BaseData,
-    T: Algorithm
-{
-    type SynchronizeIterator;
-
-    fn new(algorithm: T, subscriptions: &Vec<Subscription<'b, 'c>>);
-    fn stream_data(&mut self) -> Self::SynchronizeIterator;
-}
-
 pub(crate) trait TimeProvider {
     fn get_utc_now() -> u128;
 }
 
-pub(crate) struct Subscription<'a, 'b> {
+pub struct Subscription<'a, B> 
+where
+    B: BaseData
+{
     removed_from_universe: bool,
-    subscription_requests: Vec<SubscriptionRequest>,
-    universes: Vec<Universe>,
-    security: SecurityPrice,
-    configuration: &'a SubscriptionDataConfig<'b>,
+    data: Vec<SubscriptionData<'a, B>>,
+    requests: Vec<SubscriptionRequest>,
 }
 
 pub(crate) struct SubscriptionRequest {
@@ -81,4 +70,8 @@ where
             subscription_manager: subscriptions 
         }
     }
+}
+
+impl Subscriptions for Subscription {
+
 }

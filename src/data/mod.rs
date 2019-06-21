@@ -6,7 +6,7 @@ use map_files::MapFileProvider;
 use bars::*;
 
 pub mod bars;
-pub mod base_data_collection;
+pub mod collections;
 pub mod map_files;
 pub mod universe;
 
@@ -130,4 +130,11 @@ pub enum SecurityPrice {
     Future,
     Options,
     Security
+}
+
+pub enum Exchange {
+}
+
+pub enum SaleCondition {
+
 }

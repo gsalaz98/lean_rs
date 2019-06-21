@@ -1,45 +1,24 @@
 use std::vec::IntoIter;
 use crate::data::BaseData;
 use crate::engine::Algorithm;
-use crate::engine::data_feeds::{SubscriptionFrontierTimeProvider, Synchronizer, TimeProvider, TimeSlice, TimeSliceFactory};
-use crate::engine::data_feeds::subscriptions::{Subscription, SubscriptionSynchronizer};
+use crate::engine::data_feeds::{Subscription, SubscriptionFrontierTimeProvider, TimeProvider, TimeSlice, TimeSliceFactory};
+use crate::engine::data_feeds::subscriptions::SubscriptionSynchronizer;
 
-pub(crate) struct DataSynchronizer<'a, B, T>
+pub(crate) struct DataSynchronizer<'a, B, T, V, W> 
 where
     B: BaseData,
     T: Algorithm,
+    V: TimeProvider,
+    W: TimeProvider
 {
     algorithm: T,
-    subscriptions : Vec<Subscription<'a, B>>,
-    synchronizer: SubscriptionSynchronizer,
-}
+    subscription_manager: Vec<Subscription<'a, B>>,
+    subscription_synchronizer: SubscriptionSynchronizer,
+    time_slice_factory: TimeSliceFactory,
+    time_provider: V,
+    frontier_time_provider: W,
 
-impl<'a, 'b, B, T> Synchronizer<'a, 'b, B, T> for DataSynchronizer<'a, B, T> 
-where
-    B: BaseData + 'a,
-    T: Algorithm,
-{
-    type SynchronizeIterator = IntoIter<TimeSlice<'b, B>>;
-
-    fn new(algorithm: T, subscriptions: Vec<Subscription<'a, B>>, synchronizer: SubscriptionSynchronizer) -> Self {
-        Self {
-            algorithm,
-            subscriptions,
-            synchronizer
-        }
-    }
-
-    fn stream_data(&mut self) -> Self::SynchronizeIterator
-    {
-        self.post_initialize();
-
-        // get_time_provider() will call get_initial_frontier_time() which
-        // will consume added subscriptions so we need to do this after initialization
-        let time_provider = self.get_time_provider();
-
-        // Just return an empty vec for the time being
-        Vec::<TimeSlice<'a, B>>::default().into_iter()
-    }
+    previous_emit_time: u64,
 }
 
 impl<'a, B, T, V, W> DataSynchronizer<'a, B, T, V, W>
@@ -50,7 +29,7 @@ where
     W: TimeProvider 
 {
     fn get_time_provider(&self) -> impl TimeProvider {
-        SubscriptionFrontierTimeProvider::<'a, B>::new(self.get_initial_frontier_time(), self.subscription_manager)
+        SubscriptionFrontierTimeProvider::<'a, Subscription<'a, B>>::new(self.get_initial_frontier_time(), self.subscription_manager)
     }
 
     fn get_initial_frontier_time(&self) {
@@ -62,3 +41,29 @@ where
     }
 }
 
+impl<'a, B, T, V, W> Iterator for DataSynchronizer<'a, B, T, V, W>
+where
+    B: BaseData,
+    T: Algorithm,
+    V: TimeProvider,
+    W: TimeProvider 
+{
+
+    type Item = TimeSlice<'a, B>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.subscription_synchronizer.sync() {
+            Ok(time_slice) => {
+                if time_slice.time != u64.max_value() {
+                    self.previous_emit_time = time_slice.time;
+                    return Some(time_slice)
+                }
+                match time_slice.security_changes {
+                    Some(change) => return Some(time_slice),
+                    None => return None;
+                }
+            },
+            Err(runtime_err) => AlgorithmErr(runtime_err)
+        }
+    }
+}
