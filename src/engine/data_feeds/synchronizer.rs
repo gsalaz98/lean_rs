@@ -4,28 +4,30 @@ use crate::engine::Algorithm;
 use crate::engine::data_feeds::{SubscriptionFrontierTimeProvider, Synchronizer, TimeProvider, TimeSlice, TimeSliceFactory};
 use crate::engine::data_feeds::subscriptions::{Subscription, SubscriptionSynchronizer};
 
-pub(crate) struct DataSynchronizer<'a, B, T, V, W> 
+pub(crate) struct DataSynchronizer<'a, B, T>
 where
+    B: BaseData,
     T: Algorithm,
-    V: TimeProvider,
-    W: TimeProvider
 {
     algorithm: T,
-    subscription_manager: Vec<Subscription<'a, B>>,
-    subscription_synchronizer: SubscriptionSynchronizer,
-    time_slice_factory: TimeSliceFactory,
-    time_provider: V,
-    frontier_time_provider: W,
+    subscriptions : Vec<Subscription<'a, B>>,
+    synchronizer: SubscriptionSynchronizer,
 }
 
-impl<'a, 'b, B, T, U, V, W> Synchronizer<'a, B> for DataSynchronizer<'b, B, T, V, W> 
+impl<'a, 'b, B, T> Synchronizer<'a, 'b, B, T> for DataSynchronizer<'a, B, T> 
 where
     B: BaseData + 'a,
     T: Algorithm,
-    V: TimeProvider,
-    W: TimeProvider
 {
-    type SynchronizeIterator = IntoIter<TimeSlice<'a, B>>;
+    type SynchronizeIterator = IntoIter<TimeSlice<'b, B>>;
+
+    fn new(algorithm: T, subscriptions: Vec<Subscription<'a, B>>, synchronizer: SubscriptionSynchronizer) -> Self {
+        Self {
+            algorithm,
+            subscriptions,
+            synchronizer
+        }
+    }
 
     fn stream_data(&mut self) -> Self::SynchronizeIterator
     {

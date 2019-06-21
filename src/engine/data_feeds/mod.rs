@@ -3,18 +3,20 @@ use crate::data::{BaseData, SecurityPrice, Slice, SubscriptionDataConfig};
 use crate::data::base_data_collection::BaseDataCollection;
 use crate::data::universe::{SecurityChanges, Universe};
 use crate::engine::Algorithm;
+use crate::engine::data_feeds::subscriptions::Subscriptions;
 
 pub(crate) mod local;
 pub(crate) mod subscriptions;
 pub(crate) mod synchronizer;
 
-pub(crate) trait Synchronizer<'a, B>
+pub(crate) trait Synchronizer<'a, 'b, B, T>
 where
-    B: BaseData
+    B: BaseData,
+    T: Algorithm
 {
     type SynchronizeIterator;
 
-    fn new(algorithm: impl Algorithm);
+    fn new(algorithm: T, subscriptions: &Vec<Subscription<'b, 'c>>);
     fn stream_data(&mut self) -> Self::SynchronizeIterator;
 }
 
@@ -69,8 +71,11 @@ where
     subscription_manager: Vec<&'a T>,
 }
 
-impl<'a, T> SubscriptionFrontierTimeProvider<'a, T> {
-    fn new(utc_now: u128, subscriptions: Vec<&'a Subscription>) -> Self {
+impl<'a, T> SubscriptionFrontierTimeProvider<'a, T>
+where
+    T: Subscriptions 
+{
+    fn new(utc_now: u128, subscriptions: Vec<&'a T>) -> Self {
         Self {
             utc_now,
             subscription_manager: subscriptions 

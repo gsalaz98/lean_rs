@@ -8,7 +8,10 @@ pub trait Subscriptions: Iterator {
     
 }
 
-pub struct Subscription<'a, T> {
+pub struct Subscription<'a, T> 
+where
+    T: BaseData
+{
     removed_from_universe: bool,
     data: IntoIter<SubscriptionData<'a, T>>,
     requests: Vec<SubscriptionRequest<'a>>,
