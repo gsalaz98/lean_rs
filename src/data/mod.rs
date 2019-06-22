@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::time::Duration;
 
 use crate::engine::data_feeds::subscriptions::SubscriptionDataSource;
@@ -43,11 +44,20 @@ pub struct SubscriptionDataConfig<'a>
     exchange_tz: i8,
 }
 
+#[derive(Eq, PartialEq, Hash)]
+pub struct EpochTime {
+    time: u64
+}
+
 pub struct Symbol<'a> {
     id: Box<SecurityIdentifier<'a>>,
     value: &'a str,
     underlying: Option<Box<Symbol<'a>>>,
     security_type: SecurityType,
+}
+
+pub struct Security {
+    
 }
 
 pub struct SecurityIdentifierCache<'a> {
@@ -78,7 +88,6 @@ pub struct Splits {}
 pub struct Dividends {}
 pub struct Delistings {}
 pub struct SymbolChangedEvents {}
-pub struct Security {}
 
 /// Asset class
 pub enum SecurityType {

@@ -1,51 +1,56 @@
 use std::collections::HashMap;
-use crate::data::{BaseData, SecurityPrice, Slice, SubscriptionDataConfig};
+use crate::data::{BaseData, Security, Slice, SubscriptionDataConfig};
 use crate::data::collections::BaseDataCollection;
 use crate::data::universe::{SecurityChanges, Universe};
 use crate::engine::data_feeds::subscriptions::{Subscriptions, SubscriptionData};
+use chrono::prelude::*;
 
 pub(crate) mod local;
 pub(crate) mod subscriptions;
 pub(crate) mod synchronizer;
 
-pub(crate) trait TimeProvider {
-    fn get_utc_now() -> u128;
+pub trait TimeProvider {
+    fn to_chrono() -> DateTime;
 }
 
-pub struct Subscription<'a, B> 
+pub struct Subscription<'a, B, I> 
 where
-    B: BaseData
+    B: BaseData,
+    I: Iterator<Item = SubscriptionData<'a, B>>
 {
     removed_from_universe: bool,
-    data: Vec<SubscriptionData<'a, B>>,
     requests: Vec<SubscriptionRequest>,
+
+    security: Security,
+    config: SubscriptionDataConfig<'a>,
+    data: I,
 }
 
 pub(crate) struct SubscriptionRequest {
 
 }
 
-pub(crate) struct TimeSlice<'a, T> 
+pub(crate) struct TimeSlice<'a, B> 
 where 
-    T: BaseData
+    B: BaseData
 {
     data_point_count: i64,
     time: u128,
-    data: Vec<DataFeedPacket<'a, T>>,
+    data: Vec<DataFeedPacket<'a, B>>,
     slice: &'a Slice,
     security_changes: SecurityChanges,
-    universe_data: HashMap<Universe, BaseDataCollection<T>>
+    universe_data: HashMap<Universe, BaseDataCollection<B>>
 }
 
-pub(crate) struct DataFeedPacket<'a, T>
+pub(crate) struct DataFeedPacket<'a, B>
 where
-    T: BaseData
+    B: BaseData
 {
     is_removed: bool,
 
-    security: SecurityPrice,
+    security: &'a Security,
     configuration: SubscriptionDataConfig<'a>,
-    data: Vec<&'a T>
+    data: Vec<&'a B>
 }
 
 pub(crate) struct TimeSliceFactory {
@@ -60,6 +65,25 @@ where
     subscription_manager: Vec<&'a T>,
 }
 
+impl<'a, B> DataFeedPacket<'a, B>
+where 
+    B: BaseData 
+{
+    fn new<I>(subscription: &Subscription<'a, B, I>) -> Self
+    where
+        I: Iterator<Item = SubscriptionData<'a, B>>
+    {
+        let security = subscription.security;
+
+        Self {
+            security: &security,
+            configuration: subscription.config,
+            data: Vec::with_capacity(64),
+            is_removed: subscription.removed_from_universe
+        }
+    }
+}
+
 impl<'a, T> SubscriptionFrontierTimeProvider<'a, T>
 where
     T: Subscriptions 
@@ -72,6 +96,14 @@ where
     }
 }
 
-impl Subscriptions for Subscription {
+impl<'a, T> TimeProvider for SubscriptionFrontierTimeProvider<'a, T> {
+
+}
+
+impl<'a, B, I> Subscriptions for Subscription<'a, B, I> 
+where
+    B: BaseData,
+    I: Iterator<Item = SubscriptionData<'a, B>>
+{
 
 }
