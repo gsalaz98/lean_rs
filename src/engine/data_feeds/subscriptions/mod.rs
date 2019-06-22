@@ -37,5 +37,29 @@ impl SubscriptionSynchronizer {
         let universe_data: HashMap<Universe, BaseDataCollection<B>> = HashMap::new();
         let frontier = self.frontier_time_provider.get_utc_now();
 
+        let mut newChanges: Option<SecurityChanges> = None;
+
+        loop {
+            let sub_len = subscriptions.len();
+
+            for (i, subscription) in subscriptions.enumerate().into_iter() {
+                if i == sub_len {
+                    self.on_subscription_finished(&subscription);
+                }
+
+                let mut packet = None;
+
+                match subscription.current {
+                    Some(sub) => {
+                        while data.emit_time_utc <= frontier {
+                            match packet {
+                                Some(data) => data.push(sub.data),
+                                None => packet = DataFeedPacket::new(&subscription);
+                            };
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -58,12 +58,13 @@ where
                     self.previous_emit_time = time_slice.time;
                     return Some(time_slice)
                 }
+
                 match time_slice.security_changes {
                     Some(change) => return Some(time_slice),
-                    None => return None;
+                    None => return None
                 }
             },
-            Err(runtime_err) => AlgorithmErr(runtime_err)
+            Err(runtime_err) => algorithm_err(runtime_err)
         }
     }
 }
