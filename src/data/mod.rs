@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::Duration;
-
 use crate::engine::data_feeds::subscriptions::SubscriptionDataSource;
 use map_files::MapFileProvider;
 use bars::*;
+use chrono::prelude::*;
 
 pub mod bars;
 pub mod collections;
@@ -24,6 +24,10 @@ pub trait BaseData {
 /// Event of data. Can contain multiple pieces of data
 pub trait DataEvent: Iterator {
 
+}
+
+pub trait Time {
+    fn to_chrono(&self) -> DateTime<Utc>;
 }
 
 /// Subscription configuration: instructs the [`crate::subscriptions::SubscriptionDataReader`] 
@@ -46,7 +50,7 @@ pub struct SubscriptionDataConfig<'a>
 
 #[derive(Eq, PartialEq, Hash)]
 pub struct EpochTime {
-    time: u64
+    pub time: u64
 }
 
 pub struct Symbol<'a> {
@@ -142,6 +146,7 @@ pub enum SecurityPrice {
 }
 
 pub enum Exchange {
+
 }
 
 pub enum SaleCondition {

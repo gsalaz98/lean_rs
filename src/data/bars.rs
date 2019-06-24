@@ -7,7 +7,7 @@ pub struct QuoteBar {}
 pub struct Tick {
     tick_type: TickType,
     quantity: u64,
-    exchange: String,
+    exchange: Exchange,
     sale_condition: SaleCondition,
     suspicious: bool,
 
@@ -20,4 +20,3 @@ pub struct Tick {
 
 pub struct OptionChain {}
 pub struct FuturesChain {}
-
