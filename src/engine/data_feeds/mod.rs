@@ -1,13 +1,24 @@
 use std::collections::HashMap;
+use std::time::Duration;
+use std::rc::Rc;
 use crate::data::{BaseData, EpochTime, Time, Security, Slice, SubscriptionDataConfig};
 use crate::data::collections::BaseDataCollection;
 use crate::data::universe::{SecurityChanges, Universe};
-use crate::engine::data_feeds::subscriptions::{Subscriptions, SubscriptionData};
+use crate::engine::data_feeds::subscriptions::SubscriptionData;
 use chrono::prelude::*;
 
 pub(crate) mod local;
 pub(crate) mod subscriptions;
 pub(crate) mod synchronizer;
+
+pub trait DataFeedSubscriptionManager<'a, B, I>
+where
+    B: BaseData,
+    I: Iterator<Item = SubscriptionData<B>>
+{
+    fn add_subscription(&self, subscription: Subscription<'a, B, I>);
+    fn remove_subscription(&self, subscription: Subscription<'a, B, I>);
+}
 
 pub struct Subscription<'a, B, I> 
 where
@@ -45,46 +56,38 @@ where
     is_removed: bool,
 
     security: &'a Security,
-    configuration: SubscriptionDataConfig<'a>,
-    data: Vec<&'a B>
+    configuration: &'a SubscriptionDataConfig<'a>,
+    data: Vec<Rc<B>>
 }
 
 pub(crate) struct TimeSliceFactory {
 
 }
 
-pub(crate) struct SubscriptionFrontierTimeProvider<'a, T>
-where
-    T: Subscriptions
-{
+pub(crate) struct SubscriptionFrontierTimeProvider<T> {
     utc_now: EpochTime,
-    subscription_manager: &'a Vec<T>,
+    subscription_manager: T,
 }
 
 impl<'a, B> DataFeedPacket<'a, B>
 where 
     B: BaseData 
 {
-    fn new<I>(subscription: &Subscription<'a, B, I>) -> Self
+    fn new<'b: 'a, I>(subscription: &'b Subscription<'a, B, I>) -> Self
     where
         I: Iterator<Item = SubscriptionData<B>>
     {
-        let security = subscription.security;
-
         Self {
-            security: &security,
-            configuration: subscription.config,
+            security: &subscription.security,
+            configuration: &subscription.config,
             data: Vec::with_capacity(64),
             is_removed: subscription.removed_from_universe
         }
     }
 }
 
-impl<'a, T> SubscriptionFrontierTimeProvider<'a, T>
-where
-    T: Subscriptions 
-{
-    fn new(utc_now: EpochTime, subscriptions: &'a Vec<T>) -> Self {
+impl<T> SubscriptionFrontierTimeProvider<T> {
+    fn new(utc_now: EpochTime, subscriptions: T) -> Self {
         Self {
             utc_now,
             subscription_manager: subscriptions 
@@ -92,22 +95,10 @@ where
     }
 }
 
-impl<'a, T> Time for SubscriptionFrontierTimeProvider<'a, T> 
-where
-    T: Subscriptions
-{
+impl<T> Time for SubscriptionFrontierTimeProvider<T> {
     fn to_chrono(&self) -> DateTime<Utc> {
-        use chrono;
-
+        let duration = Duration::from_millis(self.utc_now.time);
         
-        self.utc_now.time
+        DateTime::from_utc(NaiveDateTime::from_timestamp(duration.as_secs() as i64, duration.subsec_millis()), Utc)
     }
-}
-
-impl<'a, B, I> Subscriptions for Subscription<'a, B, I> 
-where
-    B: BaseData,
-    I: Iterator<Item = SubscriptionData<B>>
-{
-
 }

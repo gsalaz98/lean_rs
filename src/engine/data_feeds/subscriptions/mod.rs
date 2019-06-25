@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::data::{BaseData, EpochTime};
@@ -8,15 +9,11 @@ use crate::engine::frontier::ManualTimeProvider;
 
 pub(crate) mod subscription_reader;
 
-pub trait Subscriptions {
-
-}
-
 pub struct SubscriptionData<B> 
 where
     B: BaseData
 {
-    data: B,
+    data: Rc<B>,
     emit_time_utc: u64,
 }
 
@@ -43,8 +40,8 @@ where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>
 {
-    pub fn sync(&self, subscriptions: &Vec<Subscription<'c, B, I>>) -> Result<TimeSlice<'a, B>, SubscriptionErr> {
-        let temp_data = Vec::with_capacity(1);
+    pub fn sync(&self, subscriptions: &Vec<Subscription<'a, B, I>>) -> Result<TimeSlice<'c, B>, SubscriptionErr> {
+        let temp_data = Vec::<B>::with_capacity(1);
 
         let universe_data: HashMap<Universe, BaseDataCollection<B>> = HashMap::new();
         let frontier = self.frontier_time_provider.current_time;
@@ -54,19 +51,22 @@ where
 
         loop {
             let mut i = 0;
-            for subscription in subscriptions.into_iter() {
+            for subscription in subscriptions.iter() {
                 if i == sub_len {
                     //self.on_subscription_finished(subscription);
                 }
 
-                let mut packet: Option<DataFeedPacket<'_, B>> = None;
+                let packet: Rc<RefCell<Option<DataFeedPacket<'_, B>>>> = Rc::new(RefCell::new(None));
 
-                for subscription_data in subscription.data {
+                for subscription_data in subscription.data.by_ref() {
                     while subscription_data.emit_time_utc <= frontier {
-                        match packet {
-                            Some(data) => data.data.push(&subscription_data.data),
-                            None => packet = Some(DataFeedPacket::new(&subscription))
-                        };
+                        let packet_clone = packet.clone();
+
+                        if packet_clone.borrow().is_none() {
+                            packet.replace(Some(DataFeedPacket::new(&subscription)));
+                        }
+                        
+                        packet_clone.borrow_mut().unwrap().data.push(subscription_data.data.clone());
                     }
                 }
             }
