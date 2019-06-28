@@ -21,26 +21,26 @@ pub struct SubscriptionDataSource {
 
 }
 
-pub struct SubscriptionSynchronizer<'a, 'b, 'c, B, I>
+pub struct SubscriptionSynchronizer<B, I>
 where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>
 {
-    frontier_time_provider: ManualTimeProvider,
-    subscription_finished: Vec<Box<FnOnce(Self, &'b Subscription<'c, B, I>)>>
+    frontier_time_provider: Rc<ManualTimeProvider>,
+    subscription_finished: Vec<Box<FnOnce(Self, Rc<Subscription<B, I>>)>>
 }
 
-struct SubscriptionErr {
+pub struct SubscriptionErr {
     message: String,
     frontier_step: EpochTime,
 }
 
-impl<'a, 'b, 'c, B, I> SubscriptionSynchronizer<'a, 'b, 'c, B, I>
+impl<B, I> SubscriptionSynchronizer<B, I>
 where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>
 {
-    pub fn sync(&self, subscriptions: &Vec<Subscription<'a, B, I>>) -> Result<TimeSlice<'c, B>, SubscriptionErr> {
+    pub(crate) fn sync(&self, subscriptions: &Vec<Rc<Subscription<B, I>>>) -> Result<TimeSlice<B>, SubscriptionErr> {
         let temp_data = Vec::<B>::with_capacity(1);
 
         let universe_data: HashMap<Universe, BaseDataCollection<B>> = HashMap::new();
@@ -51,34 +51,44 @@ where
 
         loop {
             let mut i = 0;
-            for subscription in subscriptions.iter() {
+            for subscription in subscriptions {
                 if i == sub_len {
                     //self.on_subscription_finished(subscription);
                 }
 
-                let packet: Rc<RefCell<Option<DataFeedPacket<'_, B>>>> = Rc::new(RefCell::new(None));
+                let packet: Rc<RefCell<Option<DataFeedPacket<B>>>> = Rc::new(RefCell::new(None));
 
-                for subscription_data in subscription.data.by_ref() {
+                /*
+                for subscription_data in subscription.data {
                     while subscription_data.emit_time_utc <= frontier {
                         let packet_clone = packet.clone();
 
                         if packet_clone.borrow().is_none() {
-                            packet.replace(Some(DataFeedPacket::new(&subscription)));
+                            packet.replace(Some(DataFeedPacket::<B>::new(subscription.clone())));
                         }
                         
-                        packet_clone.borrow_mut().unwrap().data.push(subscription_data.data.clone());
+                        /*
+                        match packet_clone {
+                            Some(data) => data.push(subscription_data.data.clone()),
+                            None => 
+                        }
+                        packet_clone.data.push(subscription_data.data.clone());
+                        */
                     }
                 }
+                */
             }
         }
     }
 
-    pub fn on_subscription_finished(&self, subscription: &'b Subscription<'c, B, I>) {
-        for handler in self.subscription_finished {
-            (*handler)(Self {
-                frontier_time_provider: self.frontier_time_provider,
+    pub fn on_subscription_finished(&self, subscription: Rc<Subscription<B, I>>) {
+        for handler in self.subscription_finished.iter() {
+            /*
+            handler(Self {
+                frontier_time_provider: self.frontier_time_provider.clone(),
                 subscription_finished: vec![]
-            }, subscription)
+            }, subscription.clone())
+            */
         }
     }
 }

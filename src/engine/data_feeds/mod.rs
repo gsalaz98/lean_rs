@@ -11,16 +11,16 @@ pub(crate) mod local;
 pub(crate) mod subscriptions;
 pub(crate) mod synchronizer;
 
-pub trait DataFeedSubscriptionManager<'a, B, I>
+pub trait DataFeedSubscriptionManager<B, I>
 where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>
 {
-    fn add_subscription(&self, subscription: Subscription<'a, B, I>);
-    fn remove_subscription(&self, subscription: Subscription<'a, B, I>);
+    fn add_subscription(&self, subscription: Subscription<B, I>);
+    fn remove_subscription(&self, subscription: Subscription<B, I>);
 }
 
-pub struct Subscription<'a, B, I> 
+pub struct Subscription<B, I> 
 where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>
@@ -28,8 +28,8 @@ where
     removed_from_universe: bool,
     requests: Vec<SubscriptionRequest>,
 
-    security: Security,
-    config: SubscriptionDataConfig<'a>,
+    security: Rc<Security>,
+    config: Rc<SubscriptionDataConfig>,
     data: I,
 }
 
@@ -37,26 +37,26 @@ pub(crate) struct SubscriptionRequest {
 
 }
 
-pub(crate) struct TimeSlice<'a, B> 
+pub(crate) struct TimeSlice<B> 
 where 
     B: BaseData
 {
     data_point_count: i64,
     time: EpochTime,
-    data: Vec<DataFeedPacket<'a, B>>,
-    slice: &'a Slice,
+    data: Vec<DataFeedPacket<B>>,
+    slice: Rc<Slice>,
     security_changes: Option<SecurityChanges>,
     universe_data: HashMap<Universe, BaseDataCollection<B>>
 }
 
-pub(crate) struct DataFeedPacket<'a, B>
+pub(crate) struct DataFeedPacket<B>
 where
     B: BaseData
 {
     is_removed: bool,
 
-    security: &'a Security,
-    configuration: &'a SubscriptionDataConfig<'a>,
+    security: Rc<Security>,
+    configuration: Rc<SubscriptionDataConfig>,
     data: Vec<Rc<B>>
 }
 
@@ -69,17 +69,17 @@ pub(crate) struct SubscriptionFrontierTimeProvider<T> {
     subscription_manager: T,
 }
 
-impl<'a, B> DataFeedPacket<'a, B>
+impl<B> DataFeedPacket<B>
 where 
-    B: BaseData 
+    B: BaseData,
 {
-    fn new<'b: 'a, I>(subscription: &'b Subscription<'a, B, I>) -> Self
+    fn new<I>(subscription: Rc<Subscription<B, I>>) -> Self 
     where
         I: Iterator<Item = SubscriptionData<B>>
     {
         Self {
-            security: &subscription.security,
-            configuration: &subscription.config,
+            security: subscription.security.clone(),
+            configuration: subscription.config.clone(),
             data: Vec::with_capacity(64),
             is_removed: subscription.removed_from_universe
         }

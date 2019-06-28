@@ -8,11 +8,11 @@ pub struct SecurityChanges {
 
 }
 
-pub struct SubscriptionRequest<'a> {
+pub struct SubscriptionRequest {
     start_time: u128,
     end_time: u128,
     universe_subscription: bool,
     universe: Option<Universe>,
     security: Option<Security>,
-    configuration: SubscriptionDataConfig<'a>,
+    configuration: SubscriptionDataConfig,
 }

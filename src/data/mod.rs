@@ -31,11 +31,11 @@ pub trait Time {
 }
 
 /// Subscription configuration: instructs the [`crate::subscriptions::SubscriptionDataReader`] 
-pub struct SubscriptionDataConfig<'a>
+pub struct SubscriptionDataConfig
 {
     instance: DataTypes,
     security_type: SecurityType,
-    symbol: Symbol<'a>,
+    symbol: Symbol,
     tick_type: TickType,
     resolution: Resolution,
     increment: Duration,
@@ -48,15 +48,15 @@ pub struct SubscriptionDataConfig<'a>
     exchange_tz: i8,
 }
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct EpochTime {
     pub time: u64
 }
 
-pub struct Symbol<'a> {
-    id: Box<SecurityIdentifier<'a>>,
-    value: &'a str,
-    underlying: Option<Box<Symbol<'a>>>,
+pub struct Symbol {
+    id: Box<SecurityIdentifier>,
+    value: String,
+    underlying: Option<Box<Symbol>>,
     security_type: SecurityType,
 }
 
@@ -64,12 +64,12 @@ pub struct Security {
     
 }
 
-pub struct SecurityIdentifierCache<'a> {
-    cache: HashMap<&'a str, Box<SecurityIdentifier<'a>>>
+pub struct SecurityIdentifierCache {
+    cache: HashMap<String, Box<SecurityIdentifier>>
 }
 
-pub struct SecurityIdentifier<'a> {
-    map_file_provider_name: &'a str,
+pub struct SecurityIdentifier {
+    map_file_provider_name: String,
     map_file_provider: dyn MapFileProvider,
 }
 
