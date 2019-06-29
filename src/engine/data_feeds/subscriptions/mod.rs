@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use crate::data::{BaseData, EpochTime};
 use crate::data::collections::BaseDataCollection;
-use crate::data::universe::{SecurityChanges, SubscriptionRequest, Universe};
+use crate::data::universe::{SecurityChanges, Universe};
 use crate::engine::data_feeds::{DataFeedPacket, TimeSlice, Subscription};
 use crate::engine::frontier::ManualTimeProvider;
 

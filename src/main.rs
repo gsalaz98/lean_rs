@@ -1,4 +1,6 @@
-/// ## LEAN.Rs- LEAN Algorithmic Trading Platform in Rust.
+#![deny(missing_docs)]
+
+/// ## lean_rs - LEAN Algorithmic Trading Platform in Rust.
 /// 
 /// An event driven backtester powered by Rust.
 /// This crate is independent/unofficial and not related in any way to QuantConnect
@@ -9,9 +11,6 @@ mod brokerages;
 mod engine;
 /// Market event types, such as quotes, trades, etc.
 pub mod data;
-
-#[deny(missing_docs)]
-#[warn(clippy::all)]
 
 fn main() {
 

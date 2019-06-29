@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 pub mod data_feeds;
 pub mod frontier;
 
