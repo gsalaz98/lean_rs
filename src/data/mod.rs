@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::rc::Rc;
 use std::time::Duration;
 use crate::engine::data_feeds::subscriptions::SubscriptionDataSource;
 use map_files::MapFileProvider;
@@ -80,11 +81,11 @@ pub struct EpochTime {
 pub struct Symbol {
     id: Box<SecurityIdentifier>,
     value: String,
-    underlying: Option<Box<Symbol>>,
+    underlying: Option<Rc<Symbol>>,
     security_type: SecurityType,
 }
 
-/// Tradable Security
+/// Tradeable Security
 pub struct Security {
     
 }
@@ -104,11 +105,11 @@ pub struct SecurityIdentifier {
 
 /// Represents a "slice" of data at a given point in time.
 /// [`QCAlgorithm.on_data`] consumes slices produced.
-pub struct Slice {
+pub struct Slice<'a> {
     splits: Option<Splits>,
     dividends: Option<Dividends>,
     delistings: Option<Delistings>,
-    symbol_changed_events: Option<SymbolChangedEvents>,
+    symbol_changed_events: Option<SymbolChangedEvents<'a>>,
 
     time: u128,
     has_data: bool,
@@ -129,12 +130,18 @@ pub struct Dividends {}
 pub struct Delistings {}
 
 /// Symbol rename events
-pub struct SymbolChangedEvents {}
+pub struct SymbolChangedEvents<'a> {
+    pub old_symbol: &'a str,
+    pub new_symbol: &'a str
+}
 
 /// Asset class
 pub enum SecurityType {
-    /// The base form of data. We represent custom data using this value.
+    /// The base form of data. This should never be used, but we've 
+    /// included it here for legacy purposes
     BaseData,
+    /// Bond markets
+    Bond,
     /// Equities/stocks
     Equity,
     /// Foreign Exchange (currency trading)
@@ -143,8 +150,17 @@ pub enum SecurityType {
     Cfd,
     /// Cryptocurrency
     Crypto,
+    /// Cryptocurrency futures
+    CryptoFutures,
+    /// Cryptocurrency options
+    CryptoOptions,
     /// Futures Contracts
     Future,
+    /// Options markets. We call it Option"S" with an s
+    /// to avoid conflict with the [`Option<T>`] enum 
+    Options,
+    /// Sneaker markets
+    Sneakers,
 }
 
 /// Venue a transaction took place in
