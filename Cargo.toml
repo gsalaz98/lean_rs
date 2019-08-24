@@ -1,5 +1,5 @@
 [package]
-name = "LeanRs"
+name = "lean_rs"
 version = "0.1.0"
 authors = ["Gerardo Salazar <gsalaz9800@gmail.com>"]
 edition = "2018"
