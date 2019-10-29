@@ -18,6 +18,8 @@ mod engine;
 /// Market event types, such as quotes, trades, etc.
 #[deny(missing_docs)]
 pub mod data;
+/// Misc. stuff in common
+pub mod common;
 
 fn main() {
 

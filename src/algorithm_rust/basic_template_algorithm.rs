@@ -1,4 +1,6 @@
-use crate::data::Slice;
+use std::collections::HashMap;
+
+use crate::data::{BaseData, Slice, Symbol};
 use crate::algorithm::qc_algorithm::QCAlgorithm;
 
 pub struct BasicTemplateAlgorithm;
@@ -8,7 +10,7 @@ impl QCAlgorithm for BasicTemplateAlgorithm {
         self.log("Hello from initialize!");
     }
 
-    fn on_data<T>(&self, data: Vec<T>) {
+    fn on_data(&self, data: HashMap<&Symbol, &dyn BaseData>) {
         
     }
 }

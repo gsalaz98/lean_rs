@@ -9,6 +9,6 @@ pub struct AlgorithmManager<T: QCAlgorithm> {
     data_point_count: u64,
 }
 
-impl<T> AlgorithmManager<T> where T: QCAlgorithm {
+impl<T> AlgorithmManager<T> where T: Algorithm {
 
 }

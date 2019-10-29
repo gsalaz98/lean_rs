@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::io::prelude::*;
 use std::rc::Rc;
 use std::time::Duration;
 use crate::engine::data_feeds::subscriptions::SubscriptionDataSource;
@@ -17,20 +18,17 @@ pub mod collections;
 pub mod map_files;
 /// Universe selection
 pub mod universe;
+/// Subscription definitions
+pub mod subscriptions;
 
-/// Base form of data representable
+/// Base form of data representable in LEAN
 pub trait BaseData {
     /// Instructs `SubscriptionDataReader` where to look for the data
     fn get_source() -> SubscriptionDataSource;
     /// Reads and transforms the data to type T
-    fn reader<T>(config: SubscriptionDataConfig, line: T, date: u128) -> Self
+    fn reader<T>(config: SubscriptionDataConfig, factory: T, date: u128) -> Self
     where
-        T: DataEvent;
-}
-
-/// Event of data. Can contain multiple pieces of data
-pub trait DataEvent: Iterator {
-
+        T: Read;
 }
 
 /// Represents time in LEAN
@@ -40,11 +38,11 @@ pub trait Time {
 }
 
 /// Subscription configuration: instructs the [`crate::subscriptions::SubscriptionDataReader`] 
-pub struct SubscriptionDataConfig
+pub struct SubscriptionDataConfig<'a>
 {
     instance: DataTypes,
     security_type: SecurityType,
-    symbol: Symbol,
+    symbol: Symbol<'a>,
     tick_type: TickType,
     resolution: Resolution,
     increment: Duration,
@@ -78,10 +76,10 @@ pub struct EpochTime {
 /// 
 /// Q: If I'm trading options, how do I access the underlying symbol?
 /// A: Use [`Symbol.underlying`]
-pub struct Symbol {
-    id: Box<SecurityIdentifier>,
+pub struct Symbol<'a> {
+    pub id: SecurityIdentifier<'a>,
     value: String,
-    underlying: Option<Rc<Symbol>>,
+    underlying: Option<Symbol<'a>>,
     security_type: SecurityType,
 }
 
@@ -91,33 +89,38 @@ pub struct Security {
 }
 
 /// Cache of security identifiers
-pub struct SecurityIdentifierCache {
-    cache: HashMap<String, Box<SecurityIdentifier>>
+pub struct SecurityIdentifierCache<'a> {
+    cache: HashMap<String, SecurityIdentifier<'a>>
 }
 
 /// Identifies a security via its unique properties contained within.
 /// We use a Base-32 ID to encode information into the SecurityIdentifier
 /// that can be used to transmit the information across networks
-pub struct SecurityIdentifier {
+pub struct SecurityIdentifier<'a> {
+    pub symbol: Box<Symbol<'a>>,
+
     map_file_provider_name: String,
-    map_file_provider: dyn MapFileProvider,
+    map_file_provider: &'a dyn MapFileProvider,
 }
 
 /// Represents a "slice" of data at a given point in time.
 /// [`QCAlgorithm.on_data`] consumes slices produced.
-pub struct Slice<'a> {
+pub struct Slice<B> 
+where 
+    B: BaseData 
+{
     splits: Option<Splits>,
     dividends: Option<Dividends>,
     delistings: Option<Delistings>,
-    symbol_changed_events: Option<SymbolChangedEvents<'a>>,
+    symbol_changed_events: Option<SymbolChangedEvents>,
 
     time: u128,
     has_data: bool,
-    bars: Option<Vec<TradeBar>>,
-    quote_bars: Option<Vec<QuoteBar>>,
-    ticks: Option<Vec<Tick>>,
+
     option_chains: Option<Vec<OptionChain>>,
     futures_chains: Option<Vec<FuturesChain>>,
+
+    data: B
 }
 
 /// Split events
@@ -130,16 +133,16 @@ pub struct Dividends {}
 pub struct Delistings {}
 
 /// Symbol rename events
-pub struct SymbolChangedEvents<'a> {
-    pub old_symbol: &'a str,
-    pub new_symbol: &'a str
+pub struct SymbolChangedEvents {
+    pub old_symbol: String,
+    pub new_symbol: String
 }
 
 /// Asset class
 pub enum SecurityType {
     /// The base form of data. This should never be used, but we've 
     /// included it here for legacy purposes
-    BaseData,
+    Base,
     /// Bond markets
     Bond,
     /// Equities/stocks
@@ -157,10 +160,8 @@ pub enum SecurityType {
     /// Futures Contracts
     Future,
     /// Options markets. We call it Option"S" with an s
-    /// to avoid conflict with the [`Option<T>`] enum 
+    /// to avoid conflict with the [`Option<T>`] type
     Options,
-    /// Sneaker markets
-    Sneakers,
 }
 
 /// Venue a transaction took place in
@@ -222,4 +223,24 @@ pub enum DataTypes {
 /// Condition of sale - for equity data
 pub enum SaleCondition {
 
+}
+
+impl<'a> SecurityIdentifier<'a> {
+    pub fn generate_base<T: BaseData>(ticker: impl Into<String>, market: Market, map_symbol: bool, date: Option<chrono::DateTime>) -> Self {
+        let symbol: Symbol;
+        let first_date: chrono::DateTime;
+
+        if map_symbol {
+            let first_ticker_date = Self::get_first_ticker_and_date(symbol, market);
+            symbol = first_ticker_date.0;
+            first_date = first_ticker_date.1;
+        }
+
+        Self::generate(
+            first_date, 
+            Self::generate_base_symbol::<T>(symbol),
+            SecurityType::Base,
+            market,
+            false)
+    }
 }

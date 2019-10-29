@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::prelude::*;
 use std::time::Duration;
 use std::rc::Rc;
 use crate::data::{BaseData, EpochTime, Time, Security, Slice, SubscriptionDataConfig};
@@ -19,8 +20,14 @@ where
     fn add_subscription(&self, subscription: Subscription<B, I>);
     fn remove_subscription(&self, subscription: Subscription<B, I>);
 }
+pub trait DataFeed<T: Read>
+{
+    fn cache();
 
-pub struct Subscription<B, I> 
+    fn read_from_cache() -> T;
+}
+
+pub struct Subscription<'a, B, I> 
 where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>
@@ -29,7 +36,7 @@ where
     requests: Vec<SubscriptionRequest>,
 
     security: Rc<Security>,
-    config: Rc<SubscriptionDataConfig>,
+    config: SubscriptionDataConfig<'a>,
     data: I,
 }
 
@@ -37,26 +44,26 @@ pub(crate) struct SubscriptionRequest {
 
 }
 
-pub(crate) struct TimeSlice<B> 
+pub(crate) struct TimeSlice<'a, B> 
 where 
     B: BaseData
 {
     data_point_count: i64,
     time: EpochTime,
-    data: Vec<DataFeedPacket<B>>,
-    slice: Rc<Slice>,
+    data: Vec<DataFeedPacket<'a, B>>,
+    slice: Slice<B>,
     security_changes: Option<SecurityChanges>,
     universe_data: HashMap<Universe, BaseDataCollection<B>>
 }
 
-pub(crate) struct DataFeedPacket<B>
+pub(crate) struct DataFeedPacket<'a, B>
 where
     B: BaseData
 {
     is_removed: bool,
 
     security: Rc<Security>,
-    configuration: Rc<SubscriptionDataConfig>,
+    configuration: SubscriptionDataConfig<'a>,
     data: Vec<Rc<B>>
 }
 
@@ -69,7 +76,7 @@ pub(crate) struct SubscriptionFrontierTimeProvider<T> {
     subscription_manager: T,
 }
 
-impl<B> DataFeedPacket<B>
+impl<'a, B> DataFeedPacket<'a, B>
 where 
     B: BaseData,
 {

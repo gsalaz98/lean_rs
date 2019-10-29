@@ -4,14 +4,15 @@ use crate::engine::Algorithm;
 use crate::engine::data_feeds::{DataFeedSubscriptionManager, Subscription, SubscriptionData, SubscriptionFrontierTimeProvider, TimeSlice, TimeSliceFactory};
 use crate::engine::data_feeds::subscriptions::SubscriptionSynchronizer;
 
-pub(crate) struct DataSynchronizer<B, D, I, T>
+pub(crate) struct DataSynchronizer<'a, 'b, B, D, I, T>
 where
     B: BaseData,
     I: Iterator<Item = SubscriptionData<B>>,
     T: Algorithm,
 {
     algorithm: T,
-    subscriptions: Vec<Rc<Subscription<B, I>>>,
+    /// List of borrwed subscriptions.
+    subscriptions: Vec<&'b Subscription<'a, B, I>>,
     /// Manages subscription synchronization (i.e. generation of TimeSlice items)
     pub subscription_synchronizer: SubscriptionSynchronizer<B, I>,
     time_slice_factory: TimeSliceFactory,
@@ -21,7 +22,7 @@ where
     previous_emit_time: EpochTime,
 }
 
-impl<B, D, I, T> DataSynchronizer<B, D, I, T>
+impl<'a, 'b, B, D, I, T> DataSynchronizer<'a, 'b, B, D, I, T>
 where
     B: BaseData,
     D: DataFeedSubscriptionManager<B, I>,
@@ -41,14 +42,14 @@ where
     }
 }
 
-impl<B, D, I, T> Iterator for DataSynchronizer<B, D, I, T>
+impl<'a, B, D, I, T> Iterator for DataSynchronizer<'a, B, D, I, T>
 where
     B: BaseData,
     D: DataFeedSubscriptionManager<B, I>,
     I: Iterator<Item = SubscriptionData<B>>,
     T: Algorithm,
 {
-    type Item = TimeSlice<B>;
+    type Item = TimeSlice<'a, B>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: Bad practice; remove need to collect
